@@ -129,14 +129,15 @@ async def handle_callback(update: Update, context):
     
         )
         keyboard = [[InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")]]
-        reply_markup = InlineKeyboardMarkup(keyboard)
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
-        sent_message = await query.message.reply_text(
+    # ОТПРАВКА
+    sent_message = await query.message.reply_text(
         text,
         reply_markup=reply_markup,
         parse_mode="Markdown"
     )
-        context.user_data["last_message_id"] = sent_message.message_id
+    context.user_data["last_message_id"] = sent_message.message_id
 
     # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ОТДЕЛЬНЫЙ БЛОК) ---
     elif data == "main_menu":
