@@ -1,6 +1,21 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
+from flask import Flask
+import threading
+
+flask_app = Flask('')
+
+@flask_app.route('/')
+def home():
+    return "Бот работает! ✅"
+
+def run_flask():
+    flask_app.run(host='0.0.0.0', port=10000)
+
+threading.Thread(target=run_flask).start()
+print("✅ Flask-заглушка запущена на порту 10000")
+
 TOKEN = "8752978380:AAGE4HDcV_SnK9c4Qy6BDF_4WN3USDmUmkU"
 
 # --- ДАННЫЕ ---
