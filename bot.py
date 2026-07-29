@@ -1,21 +1,6 @@
 from telegram import Update, ReplyKeyboardMarkup, InlineKeyboardMarkup, InlineKeyboardButton
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
-from flask import Flask
-import threading
-
-flask_app = Flask('')
-
-@flask_app.route('/')
-def home():
-    return "Бот работает! ✅"
-
-def run_flask():
-    flask_app.run(host='0.0.0.0', port=10000)
-
-threading.Thread(target=run_flask).start()
-print("✅ Flask-заглушка запущена на порту 10000")
-
 TOKEN = "8752978380:AAGE4HDcV_SnK9c4Qy6BDF_4WN3USDmUmkU"
 
 # --- ДАННЫЕ ---
@@ -60,45 +45,48 @@ iphone_versions = {
 }
 
 async def start(update: Update, context):
-    keyboard = [
-        ["📱 iPhone"],
-        ["📱 Samsung"],
-        ["📱 Xiaomi"]
-    ]
-    reply_markup = ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
-    await update.message.reply_text("Добро пожаловать в каталог смартфонов!\nВыберите бренд:",
-        reply_markup=reply_markup
-    )
-
-async def handle_buttons(update: Update, context):
-    text = update.message.text
-
-    if text == "📱 iPhone":
-        keyboard = []
-        for version in iphone_versions.keys():
-            keyboard.append([InlineKeyboardButton(version, callback_data=f"version_{version}")])
-
-        reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.message.reply_text(
-            "Выберите версию iPhone:",
-            reply_markup=reply_markup
-        )
-
-    elif text == "📱 Samsung":
-        await update.message.reply_text("📌 Раздел Samsung пока в разработке.")
-    elif text == "📱 Xiaomi":
-        await update.message.reply_text("📌 Раздел Xiaomi пока в разработке.")
+    # Проверяем, откуда пришёл вызов: из сообщения или из кнопки
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        message = query.message
     else:
-        await update.message.reply_text("Используйте кнопки внизу экрана!")
+        message = update.message
+
+    # Удаляем старое сообщение (если есть)
+    if "last_message_id" in context.user_data:
+        try:
+            await context.bot.delete_message(
+                chat_id=message.chat_id,
+                message_id=context.user_data["last_message_id"]
+            )
+        except:
+            pass
+
+    # Главное меню (Inline-кнопки)
+    keyboard = [
+        [InlineKeyboardButton("📱 Каталог iPhone", callback_data="main_catalog")],
+        [InlineKeyboardButton("💰 Оценить iPhone", callback_data="main_assess")],
+        [InlineKeyboardButton("📞 Связаться с нами", callback_data="main_contact")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    sent_message = await message.reply_text(
+        "📱 *iPhone Hub*\n\n"
+        "Добро пожаловать! Выберите действие:",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
+    context.user_data["last_message_id"] = sent_message.message_id
 
 async def handle_callback(update: Update, context):
     query = update.callback_query
     await query.answer()
 
     data = query.data
-    print(f"Получен callback: {data}")
+    print(f"🔍 Получен callback: {data}")
 
-    # Удаляем старые сообщения
+    # --- Удаляем старое сообщение ---
     if "last_message_id" in context.user_data:
         try:
             await context.bot.delete_message(
@@ -108,25 +96,76 @@ async def handle_callback(update: Update, context):
         except:
             pass
 
-    if data.startswith("version_"):
+    # --- ГЛАВНОЕ МЕНЮ (КАТАЛОГ) ---
+    if data == "main_catalog":
+        keyboard = []
+        for version in iphone_versions.keys():
+            keyboard.append([InlineKeyboardButton(version, callback_data=f"version_{version}")])
+        keyboard.append([InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")])
+        reply_markup = InlineKeyboardMarkup(keyboard)
+        sent_message = await query.message.reply_text(
+            "📱 *Каталог iPhone*\n\nВыберите версию:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+        context.user_data["last_message_id"] = sent_message.message_id
+
+    # --- ГЛАВНОЕ МЕНЮ (ОЦЕНКА) ---
+    elif data == "main_assess":
+        sent_message = await query.message.reply_text(
+            "💰 *Оценка iPhone*\n\nСкоро здесь будет опросник!",
+            parse_mode="Markdown"
+        )
+        context.user_data["last_message_id"] = sent_message.message_id
+
+    # --- ГЛАВНОЕ МЕНЮ (КОНТАКТЫ) ---
+    elif data == "main_contact":
+        sent_message = await query.message.reply_text(
+            "📞 *Связь с нами*\n\n"
+            "📱 Telegram: @pet_rycho\n"
+            "📞 Телефон 1: 89621962960\n"
+            "📞 Телефон 2: 89605872096\n"
+            "О наличии: @APPLESHOPRFRF"
+    
+        )
+        keyboard = [[InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")]]
+        reply_markup = InlineKeyboardMarkup(keyboard)
+
+        sent_message = await query.message.reply_text(
+        text,
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
+        context.user_data["last_message_id"] = sent_message.message_id
+
+    # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ОТДЕЛЬНЫЙ БЛОК) ---
+    elif data == "main_menu":
+        await start(update, context)
+        return
+
+    # --- ВЫБОР ВЕРСИИ ---
+    elif data.startswith("version_"):
         version = data.replace("version_", "")
         models = iphone_versions[version]
 
         keyboard = []
         for model in models.keys():
-            # ИСПРАВЛЕНО: ДВЕ СКОБКИ В КОНЦЕ!
             keyboard.append([InlineKeyboardButton(model, callback_data=f"model_{version}_{model}")])
 
-        # Кнопка "Назад"
-        keyboard.append([InlineKeyboardButton("⬅️ Назад", callback_data="back_to_versions")])
+        keyboard.append([
+            InlineKeyboardButton("⬅️ Назад к версиям", callback_data="main_catalog"),
+            InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")
+        ])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         sent_message = await query.message.reply_text(
-            f"Вы выбрали {version}. Выберите модель:",
-            reply_markup=reply_markup
+            f"📱 Вы выбрали *{version}*. Выберите модель:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
         )
         context.user_data["last_message_id"] = sent_message.message_id
 
+    # --- ВЫБОР МОДЕЛИ ---
     elif data.startswith("model_"):
         parts = data.replace("model_", "").split("_", 1)
         version = parts[0]
@@ -134,32 +173,46 @@ async def handle_callback(update: Update, context):
 
         model = iphone_versions[version][model_name]
 
-        text = f"📱 {model_name}\n\n"
+        text = f"📱 *{model_name}*\n\n"
         text += f"💰 Цена: {model['price']}\n"
         text += f"📋 Характеристики: {model['specs']}"
 
-    # Отправляем фото с подписью
-        await query.message.reply_photo(
-            photo=model["photo"],
-            caption=text
-        )
+        if "photo" in model:
+            sent_message = await query.message.reply_photo(
+                photo=model["photo"],
+                caption=text,
+                parse_mode="Markdown"
+            )
+        else:
+            sent_message = await query.message.reply_text(
+                text,
+                parse_mode="Markdown"
+            )
+        context.user_data["last_message_id"] = sent_message.message_id
 
-    elif data == "back_to_versions":
+        # Кнопки после карточки
         keyboard = []
-        for ver in iphone_versions.keys():
-            keyboard.append([InlineKeyboardButton(ver, callback_data=f"version_{ver}")])
+        for model in iphone_versions[version].keys():
+            keyboard.append([InlineKeyboardButton(model, callback_data=f"model_{version}_{model}")])
+
+        keyboard.append([
+            InlineKeyboardButton("⬅️ Назад к моделям", callback_data=f"version_{version}"),
+            InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")
+        ])
 
         reply_markup = InlineKeyboardMarkup(keyboard)
         sent_message = await query.message.reply_text(
-            "Выберите версию iPhone:",
-            reply_markup=reply_markup
+            f"📱 Выберите модель *{version}*:",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
         )
         context.user_data["last_message_id"] = sent_message.message_id
 
+    # --- НЕИЗВЕСТНАЯ КОМАНДА ---
     else:
-        await query.message.reply_text("❌ Неизвестная команда.")
+        sent_message = await query.message.reply_text("❌ Неизвестная команда.")
+        context.user_data["last_message_id"] = sent_message.message_id
         print(f"❌ Неизвестный callback: {data}")
-
 async def get_file_id(update: Update, context):
     if update.message.photo:
         file_id = update.message.photo[-1].file_id
@@ -167,12 +220,22 @@ async def get_file_id(update: Update, context):
     else:
         await update.message.reply_text("Отправь мне фото!")
 
+async def pin_message(update: Update, context):
+    # Если пользователь написал /start — закрепляем сообщение с меню
+    if update.message and update.message.text == "/start":
+        try:
+            # Ждём, пока бот отправит сообщение, потом закрепляем его
+            await update.message.pin()
+        except:
+            pass
+
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(MessageHandler(filters.TEXT, handle_buttons))
 app.add_handler(CallbackQueryHandler(handle_callback))
 app.add_handler(MessageHandler(filters.PHOTO,get_file_id))
+app.add_handler(MessageHandler(filters.COMMAND, pin_message))
+
 
 print("✅ Бот запущен...")
 app.run_polling()
