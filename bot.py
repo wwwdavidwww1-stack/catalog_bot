@@ -120,26 +120,25 @@ async def handle_callback(update: Update, context):
 
     # --- ГЛАВНОЕ МЕНЮ (КОНТАКТЫ) ---
     elif data == "main_contact":
-        sent_message = await query.message.reply_text(
+        text = (
             "📞 *Связь с нами*\n\n"
             "📱 Telegram: @pet_rycho\n"
             "📞 Телефон 1: 89621962960\n"
             "📞 Телефон 2: 89605872096\n"
             "О наличии: @APPLESHOPRFRF"
-    
         )
+
         keyboard = [[InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")]]
-    reply_markup = InlineKeyboardMarkup(keyboard)
+        reply_markup = InlineKeyboardMarkup(keyboard)
 
-    # ОТПРАВКА
-    sent_message = await query.message.reply_text(
-        text,
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
-    context.user_data["last_message_id"] = sent_message.message_id
+        sent_message = await query.message.reply_text(
+            text,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
+        context.user_data["last_message_id"] = sent_message.message_id
 
-    # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ (ОТДЕЛЬНЫЙ БЛОК) ---
+    # --- ВОЗВРАТ В ГЛАВНОЕ МЕНЮ ---
     elif data == "main_menu":
         await start(update, context)
         return
@@ -197,7 +196,9 @@ async def handle_callback(update: Update, context):
             keyboard.append([InlineKeyboardButton(model, callback_data=f"model_{version}_{model}")])
 
         keyboard.append([
-            InlineKeyboardButton("⬅️ Назад к моделям", callback_data=f"version_{version}"),
+
+
+InlineKeyboardButton("⬅️ Назад к моделям", callback_data=f"version_{version}"),
             InlineKeyboardButton("🏠 Главное меню", callback_data="main_menu")
         ])
 
@@ -214,6 +215,7 @@ async def handle_callback(update: Update, context):
         sent_message = await query.message.reply_text("❌ Неизвестная команда.")
         context.user_data["last_message_id"] = sent_message.message_id
         print(f"❌ Неизвестный callback: {data}")
+        
 async def get_file_id(update: Update, context):
     if update.message.photo:
         file_id = update.message.photo[-1].file_id
