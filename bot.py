@@ -136,7 +136,7 @@ async def handle_callback(update: Update, context):
     # --- ГЛАВНОЕ МЕНЮ (КОНТАКТЫ) ---
     elif data == "main_contact":
         text = (
-            "📞 *Связь с нами*\n\n"
+            "📞 <b>Связь с нами</b>\n\n"
             "📱 Telegram: @pet_rycho\n"
             "📞 Телефон 1: 89621962960\n"
             "📞 Телефон 2: 89605872096\n"
@@ -149,7 +149,7 @@ async def handle_callback(update: Update, context):
         sent_message = await query.message.reply_text(
             text,
             reply_markup=reply_markup,
-            parse_mode="Markdown"
+            parse_mode="HTML"
         )
         context.user_data["last_message_id"] = sent_message.message_id
 
